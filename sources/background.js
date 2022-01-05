@@ -5,22 +5,22 @@ License: GNU GPLv3
 */
 
 
-var debug = false;
+const debug = false;
 
-var whatsAppUrl = "https://web.whatsapp.com/";
-var newTabUrl = "chrome://newtab/";
-var sourceChatFragment = "#watSrcChatTitle=";
+const whatsAppUrl = "https://web.whatsapp.com/";
+const newTabUrl = "chrome://newtab/";
+const sourceChatFragment = "#watSrcChatTitle=";
 
 // Default options, should match the ones defined in script.js
-var backgroundNotif = true;
-var wideText = false;
+let backgroundNotif = true;
+let wideText = false;
 
 // Allow framing // and external resources
 chrome.webRequest.onHeadersReceived.addListener(
     function (details)
     {
-        var headers = details.responseHeaders;
-        for (var i = headers.length - 1; i >= 0; i--)
+        const headers = details.responseHeaders;
+        for (let i = headers.length - 1; i >= 0; i--)
         {
             if (headers[i].name.toLowerCase() == "x-frame-options") // Potential future bug fix: || headers[i].name.toLowerCase() == "content-security-policy"
             {
@@ -38,8 +38,8 @@ chrome.webRequest.onHeadersReceived.addListener(
 
 // Ensure that one and only one WhatsApp tab or background page is open at any time
 
-var isBackgroundPageLoaded = false;
-var whatsAppTabs = [];
+let isBackgroundPageLoaded = false;
+let whatsAppTabs = [];
 
 updateWhatsAppTabs(function ()
 {
@@ -67,7 +67,7 @@ chrome.runtime.onInstalled.addListener(function (details)
     {
         updateWhatsAppTabs(function ()
         {
-            var closedCount = closeAllWhatsAppTabs();
+            const closedCount = closeAllWhatsAppTabs();
             if (closedCount > 0)
             {
                 if (debug) console.info("WAT: There were WhatsApp tabs on install, open a new one");
@@ -142,7 +142,8 @@ function loadBackgroundPage()
     if (!isBackgroundPageLoaded)
     {
         isBackgroundPageLoaded = true;
-        var randomParam = "?watRnd=" + Math.random(); // This random GET parameter forces the app cache not to be used (workaround for bug https://code.google.com/p/chromium/issues/detail?id=453843 that prevents the X-Frame-Options header from being deleted when the site is loaded from the cache)
+        // TODO
+        const randomParam = "?watRnd=" + Math.random(); // This random GET parameter forces the app cache not to be used (workaround for bug https://code.google.com/p/chromium/issues/detail?id=453843 that prevents the X-Frame-Options header from being deleted when the site is loaded from the cache)
         document.body.innerHTML = "<iframe width='1000' height='10000' src='" + whatsAppUrl + randomParam + "'></iframe>"; // Big height makes all chats to be loaded in the side panel's DOM
     }
 }
@@ -161,7 +162,7 @@ function updateWhatsAppTabs(callback)
     chrome.tabs.query({ url: whatsAppUrl + "*" }, function (tabs)
     {
         whatsAppTabs = [];
-        for (var i = 0; i < tabs.length; i++)
+        for (let i = 0; i < tabs.length; i++)
         {
             whatsAppTabs.push(tabs[i].id);
         }
@@ -181,10 +182,10 @@ function closeAllWhatsAppTabs()
 // Pass -1 to close all tabs. Returns the number of tabs that will be closed (the method is async).
 function closeAllWhatsAppTabsBut(whatsAppTabToKeep)
 {
-    var removedWhatsAppTabs = [];
-    for (var i = whatsAppTabs.length - 1; i >= 0; i--)
+    const removedWhatsAppTabs = [];
+    for (let i = whatsAppTabs.length - 1; i >= 0; i--)
     {
-        var whatsAppTab = whatsAppTabs[i];
+        const whatsAppTab = whatsAppTabs[i];
         if (whatsAppTab != whatsAppTabToKeep)
         {
             removedWhatsAppTabs.push(whatsAppTabs.splice(i, 1)[0]);
@@ -228,7 +229,7 @@ function onMessage(messageEvent, sender, callback)
     }
     else if (messageEvent.name == "backgroundNotificationClicked")
     {
-        var url = whatsAppUrl + (typeof messageEvent.srcChatTitle == "string" ? sourceChatFragment + encodeURIComponent(messageEvent.srcChatTitle) : "");
+        const url = whatsAppUrl + (typeof messageEvent.srcChatTitle == "string" ? sourceChatFragment + encodeURIComponent(messageEvent.srcChatTitle) : "");
         chrome.windows.getCurrent(function (window)
         {
             if (window != undefined && window.id != undefined)
@@ -250,8 +251,8 @@ function onMessage(messageEvent, sender, callback)
                     // This prevents the new tab to be removed automatically if another WhatsApp tab loads later.
                     chrome.tabs.query({ url: whatsAppUrl + "*", active: false }, function (tabs)
                     {
-                        var tabsToRemove = [];
-                        for (var i = 0; i < tabs.length; i++)
+                        const tabsToRemove = [];
+                        for (let i = 0; i < tabs.length; i++)
                         {
                             tabsToRemove.push(tabs[i].id);
                         }

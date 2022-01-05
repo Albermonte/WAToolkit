@@ -1,69 +1,65 @@
 ﻿/*
 WAToolkit
 Author: Cristian Perez <http://www.cpr.name>
+Maintainer: Albermonte <https://github.com/Albermonte>
 License: GNU GPLv3
 */
 
 
-var debug = false;
-var debugRepeating = false;
+// TODO: This should be changed for something better, getting dev env or similar
+const debug = false;
+const debugRepeating = false;
 
-var whatsAppUrl = "https://web.whatsapp.com/";
-var rateUrl = "https://chrome.google.com/webstore/detail/watoolkit/fedimamkpgiemhacbdhkkaihgofncola/reviews";
-var optionsFragment = "#watOptions";
-var sourceChatFragment = "#watSrcChatTitle=";
+const whatsAppUrl = "https://web.whatsapp.com/";
+// TODO: Change for new one
+const rateUrl = "https://chrome.google.com/webstore/detail/watoolkit/fedimamkpgiemhacbdhkkaihgofncola/reviews";
+const optionsFragment = "#watOptions";
+const sourceChatFragment = "#watSrcChatTitle=";
 
-var safetyDelayShort = 300;
-var safetyDelayLong = 600; // Must be smaller than checkBadgeInterval
-var safetyDelayLonger = 1200;
+const safetyDelayShort = 300;
+const safetyDelayLong = 600; // Must be smaller than checkBadgeInterval
+const safetyDelayLonger = 1200;
 
-var checkBadgeInterval = 5000; // Must be greater than safetyDelayLong
-var checkLoadingErrorInterval = 30000;
+const checkBadgeInterval = 5000; // Must be greater than safetyDelayLong
+const checkLoadingErrorInterval = 30000;
 
 // Default options, should match the ones defined in background.js
-var backgroundNotif = true;
-var wideText = false;
+let backgroundNotif = true;
+let wideText = false;
 
 // Prevent page exit confirmation dialog. The window object is not shared between the original page and the content script: http://stackoverflow.com/a/12396221/423171
-var scriptElem = document.createElement("script");
+const scriptElem = document.createElement("script");
 scriptElem.innerHTML = "window.onbeforeunload = null;";
 document.head.appendChild(scriptElem);
 
-chrome.runtime.sendMessage({ name: "getIsBackgroundPage" }, function (isBackgroundPage)
-{
-    if (isBackgroundPage)
-    {
+chrome.runtime.sendMessage({ name: "getIsBackgroundPage" }, function (isBackgroundPage) {
+    if (isBackgroundPage) {
         if (debug) console.info("WAT: Background script injected");
 
         backgroundScript();
     }
-    else
-    {
+    else {
         if (debug) console.info("WAT: Foreground script injected");
 
         foregroundScript();
     }
 
-    chrome.runtime.sendMessage({ name: "getOptions" }, function (options)
-    {
+    chrome.runtime.sendMessage({ name: "getOptions" }, function (options) {
         if (debug) console.info("WAT: Got options: " + JSON.stringify(options));
 
         backgroundNotif = options.backgroundNotif;
         wideText = options.wideText;
 
-        if (!isBackgroundPage)
-        {
+        if (!isBackgroundPage) {
             updateWideText();
         }
     });
 });
 
-function backgroundScript()
-{
+function backgroundScript() {
     addStopAnimations();
 
-    onMainUiReady(function ()
-    {
+    onMainUiReady(function () {
         proxyNotifications(true);
         checkBadge();
         reCheckBadge(true);
@@ -72,10 +68,8 @@ function backgroundScript()
     reCheckLoadingError();
 }
 
-function foregroundScript()
-{
-    onMainUiReady(function ()
-    {
+function foregroundScript() {
+    onMainUiReady(function () {
         proxyNotifications(false);
         checkBadge();
         reCheckBadge(false);
@@ -87,31 +81,24 @@ function foregroundScript()
 
 // FOR BOTH BACKGROUND AND FOREGROUND SCRIPTS ////////////////////////////////////////////////////
 
-function onMainUiReady(callback)
-{
-    try
-    {
+function onMainUiReady(callback) {
+    try {
         // First check if the main UI is already ready, just in case
-        if (document.querySelector("#app .two") != undefined)
-        {
+        if (document.querySelector("#app .two") != undefined) {
             if (debug) console.info("WAT: Found main UI, will notify main UI ready event directly");
 
             setTimeout(function () { callback(); }, safetyDelayShort);
         }
-        else
-        {
+        else {
             if (debug) console.info("WAT: Setting up mutation observer for main UI ready event...");
 
-            var appElem = document.querySelector("#app");
-            if (appElem != undefined)
-            {
-                var mutationObserver = new MutationObserver(function (mutations)
-                {
+            const appElem = document.querySelector("#app");
+            if (appElem != undefined) {
+                const mutationObserver = new MutationObserver(function (mutations) {
                     if (debug) console.info("WAT: Mutation observerd, will search main UI");
 
                     // Check if main UI is now ready (new child div with class "two")
-                    if (document.querySelector("#app .two") != undefined)
-                    {
+                    if (document.querySelector("#app .two") != undefined) {
                         if (debug) console.info("WAT: Found main UI, will notify main UI ready event");
 
                         mutationObserver.disconnect();
@@ -122,60 +109,49 @@ function onMainUiReady(callback)
             }
         }
     }
-    catch (err)
-    {
+    catch (err) {
         console.error("WAT: Exception while setting up mutation observer for main UI ready event");
         console.error(err);
     }
 }
 
-function proxyNotifications(isBackgroundScript)
-{
+function proxyNotifications(isBackgroundScript) {
     // The window object is not shared between the original page and the content script: http://stackoverflow.com/a/12396221/423171
 
-    if (isBackgroundScript)
-    {
-        window.addEventListener("message", function (event)
-        {
-            if (event != undefined && event.data != undefined && event.data.name == "backgroundNotificationClicked")
-            {
+    if (isBackgroundScript) {
+        window.addEventListener("message", function (event) {
+            if (event != undefined && event.data != undefined && event.data.name == "backgroundNotificationClicked") {
                 chrome.runtime.sendMessage({ name: "backgroundNotificationClicked", srcChatTitle: event.data.srcChatTitle });
             }
         });
     }
-    else
-    {
-        window.addEventListener("message", function (event)
-        {
-            if (event != undefined && event.data != undefined && (event.data.name == "foregroundNotificationClicked" || event.data.name == "foregroundNotificationShown"))
-            {
+    else {
+        window.addEventListener("message", function (event) {
+            if (event != undefined && event.data != undefined && (event.data.name == "foregroundNotificationClicked" || event.data.name == "foregroundNotificationShown")) {
                 setTimeout(function () { checkBadge(); }, safetyDelayLonger);
             }
         });
     }
 
-    var script = "";
+    // TODO: This is crazy, rework this in a safe way
+    let script = "";
     script += "var debug = " + debug + ";";
     script += "var isBackgroundScript = " + isBackgroundScript + ";";
     script += "var backgroundNotif = " + backgroundNotif + ";";
-    script += "(" + function ()
-    {
+    script += "(" + function () {
         // Notification spec: https://developer.mozilla.org/en/docs/Web/API/notification
 
         // Save native notification
         var _Notification = window.Notification;
 
         // Create proxy notification
-        var ProxyNotification = function (title, options)
-        {
-            if (isBackgroundScript && !backgroundNotif)
-            {
+        var ProxyNotification = function (title, options) {
+            if (isBackgroundScript && !backgroundNotif) {
                 if (debug) console.info("WAT: Notification creation intercepted, will not proxy it because the user disabled background notifications");
 
                 return;
             }
-            else
-            {
+            else {
                 if (debug) console.info("WAT: Notification creation intercepted, will proxy it");
             }
 
@@ -192,63 +168,51 @@ function proxyNotifications(isBackgroundScript)
 
             // Proxy event handlers
             var that = this;
-            _notification.onclick = function (event)
-            {
+            _notification.onclick = function (event) {
                 if (that.onclick != undefined) that.onclick(event);
 
-                if (isBackgroundScript)
-                {
+                if (isBackgroundScript) {
                     var srcChatTitle = undefined;
-                    if (event != undefined && event.srcElement != undefined && typeof event.srcElement.title == "string" && event.srcElement.title.length > 0)
-                    {
+                    if (event != undefined && event.srcElement != undefined && typeof event.srcElement.title == "string" && event.srcElement.title.length > 0) {
                         srcChatTitle = event.srcElement.title;
 
                         if (debug) console.info("WAT: Background notification click intercepted with srcChatTitle " + srcChatTitle);
                     }
                     window.postMessage({ name: "backgroundNotificationClicked", srcChatTitle: srcChatTitle }, "*");
                 }
-                else
-                {
+                else {
                     if (debug) console.info("WAT: Foreground notification click intercepted");
 
                     window.postMessage({ name: "foregroundNotificationClicked" }, "*");
                 }
             };
-            _notification.onshow = function (event)
-            {
+            _notification.onshow = function (event) {
                 if (that.onshow != undefined) that.onshow(event);
 
-                if (!isBackgroundScript)
-                {
+                if (!isBackgroundScript) {
                     if (debug) console.info("WAT: Foreground notification show intercepted");
 
                     window.postMessage({ name: "foregroundNotificationShown" }, "*");
                 }
             };
-            _notification.onerror = function (event)
-            {
+            _notification.onerror = function (event) {
                 if (that.onerror != undefined) that.onerror(event);
             };
-            _notification.onclose = function (event)
-            {
+            _notification.onclose = function (event) {
                 if (that.onclose != undefined) that.onclose(event);
             };
 
             // Proxy instance methods
-            this.close = function ()
-            {
+            this.close = function () {
                 _notification.close();
             };
-            this.addEventListener = function (type, listener, useCapture)
-            {
+            this.addEventListener = function (type, listener, useCapture) {
                 _notification.addEventListener(type, listener, useCapture);
             };
-            this.removeEventListener = function (type, listener, useCapture)
-            {
+            this.removeEventListener = function (type, listener, useCapture) {
                 _notification.removeEventListener(type, listener, useCapture);
             };
-            this.dispatchEvent = function (event)
-            {
+            this.dispatchEvent = function (event) {
                 _notification.dispatchEvent(event);
             };
         };
@@ -263,77 +227,70 @@ function proxyNotifications(isBackgroundScript)
         window.Notification = ProxyNotification;
     } + ")();";
 
-    var scriptElem = document.createElement("script");
+    const scriptElem = document.createElement("script");
     scriptElem.innerHTML = script;
     document.head.appendChild(scriptElem);
 }
 
-var lastToolbarIconWarn = -1;
-var lastToolbarIconBadgeText = -1;
-var lastToolbarIconTooltipText = -1;
+let lastToolbarIconWarn = -1;
+let lastToolbarIconBadgeText = -1;
+let lastToolbarIconTooltipText = -1;
 
-function reCheckBadge(isBackgroundScript)
-{
-    if (isBackgroundScript)
-    {
+function reCheckBadge(isBackgroundScript) {
+    if (isBackgroundScript) {
         setTimeout(function () { document.dispatchEvent(new CustomEvent("stopAnimations")); }, checkBadgeInterval - safetyDelayLong);
     }
     setTimeout(function () { checkBadge(); reCheckBadge(isBackgroundScript); }, checkBadgeInterval);
 }
 
-function checkBadge()
-{
+function checkBadge() {
     if (debugRepeating) console.info("WAT: Checking badge...");
 
-    try
-    {
-        var isSessionActive = document.querySelector("#pane-side") != undefined;
-        var warn = !isSessionActive || document.querySelector("[data-icon='alert-phone']") != undefined || document.querySelector("[data-icon='alert-computer']") != undefined;
+    try {
+        const isSessionActive = document.querySelector("#pane-side") != undefined;
+        const warn = !isSessionActive || document.querySelector("[data-icon='alert-phone']") != undefined || document.querySelector("[data-icon='alert-computer']") != undefined;
 
-        if (isSessionActive)
-        {
-            var totalUnreadCount = 0;
-            var tooltipText = "";
+        if (isSessionActive) {
+            let totalUnreadCount = 0;
+            let tooltipText = "";
 
-            var parentChatElem = document.querySelector("#pane-side").children[0].children[0].children[0];
-            var chatElems = parentChatElem.children;
-            for (var i = 0; i < chatElems.length; i++)
-            {
-                var chatElem = chatElems[i];
-                var unreadElem = chatElem.children[0].children[0].children[1].children[1].children[1];
-            
-                var unreadCount = parseInt(unreadElem.textContent) || 0; // Returns 0 in case of isNaN
-                if (unreadCount > 0)
-                {
-                    var chatTitle =  chatElem.children[0].children[0].children[1].children[0].children[0].textContent;
-                    var chatTime =   chatElem.children[0].children[0].children[1].children[0].children[1].textContent;
-                    var chatStatus = chatElem.children[0].children[0].children[1].children[1].children[0].textContent;
-            
+            const parentChatElem = document.querySelector("#pane-side").children[0].children[0].children[0];
+            const chatElems = parentChatElem.children;
+            for (let i = 0; i < chatElems.length; i++) {
+                const chatElem = chatElems[i];
+                const unreadElem = chatElem.children[0].children[0].children[1].children[1].children[1];
+
+                // TODO: Use Num() ?
+                const unreadCount = parseInt(unreadElem.textContent) || 0; // Returns 0 in case of isNaN
+                if (unreadCount > 0) {
+                    // TODO: Try to find a better way for this
+                    let chatTitle = chatElem.children[0].children[0].children[1].children[0].children[0].textContent;
+                    const chatTime = chatElem.children[0].children[0].children[1].children[0].children[1].textContent;
+                    let chatStatus = chatElem.children[0].children[0].children[1].children[1].children[0].textContent;
+
                     if (chatTitle.length > 30) // Max 30 chars
                     {
+                        // TODO: Deprecated
                         chatTitle = chatTitle.substr(0, 30 - 3) + "...";
                     }
                     if (chatStatus.length > 70) // Max 70 chars
                     {
                         chatStatus = chatStatus.substr(0, 70 - 3) + "...";
                     }
-            
+
                     totalUnreadCount += unreadCount;
                     tooltipText += (i > 0 ? "\n" : "") + "(" + unreadCount + ")  " + chatTitle + "  →  " + chatStatus + "  [" + chatTime + "]";
                 }
             }
 
-            var badgeText = "";
-            if (totalUnreadCount > 0)
-            {
+            let badgeText = "";
+            if (totalUnreadCount > 0) {
                 badgeText = totalUnreadCount.toString();
             }
-            if (tooltipText.length == 0)
-            {
+            if (tooltipText.length == 0) {
                 tooltipText = "Open WhatsApp"; // Should match browser_action.default_title defined in manifest.json
             }
-            if (lastToolbarIconWarn !== warn || lastToolbarIconBadgeText !== badgeText || lastToolbarIconTooltipText !== tooltipText)
-            {
+            if (lastToolbarIconWarn !== warn || lastToolbarIconBadgeText !== badgeText || lastToolbarIconTooltipText !== tooltipText) {
                 if (debug) console.info("WAT: Will update toolbar icon info");
 
                 chrome.runtime.sendMessage({ name: "setToolbarIcon", warn: warn, badgeText: badgeText, tooltipText: tooltipText });
@@ -341,28 +298,23 @@ function checkBadge()
                 lastToolbarIconBadgeText = badgeText;
                 lastToolbarIconTooltipText = tooltipText;
             }
-            else
-            {
+            else {
                 if (debugRepeating) console.info("WAT: Will not update toolbar icon info because it did not change");
             }
         }
-        else
-        {
-            if (lastToolbarIconWarn !== warn)
-            {
+        else {
+            if (lastToolbarIconWarn !== warn) {
                 if (debug) console.info("WAT: Will update toolbar icon warning info");
 
                 chrome.runtime.sendMessage({ name: "setToolbarIcon", warn: warn });
                 lastToolbarIconWarn = warn;
             }
-            else
-            {
+            else {
                 if (debugRepeating) console.info("WAT: Will not update toolbar icon warning info because it did not change");
             }
         }
     }
-    catch (err)
-    {
+    catch (err) {
         console.error("WAT: Exception while checking badge");
         console.error(err);
     }
@@ -370,97 +322,80 @@ function checkBadge()
 
 // FOR BACKGROUND SCRIPT /////////////////////////////////////////////////////////////////////////
 
-function addStopAnimations()
-{
+function addStopAnimations() {
     // Provide stopAnimations method to clear all pending animations that can cause live DOM data such as unreadCount not to be up to date on the background page
     // Velocity.js related thread: https://github.com/julianshapiro/velocity/issues/842 (special thanks to https://github.com/Rycochet)
     // The window object is not shared between the original page and the content script: http://stackoverflow.com/a/12396221/423171
-        
+
     if (debug) console.info("WAT: Adding stopAnimations() function...");
 
-    var script = "";
+    // TODO: Again something weird
+    let script = "";
     script += "var debugRepeating = " + debugRepeating + ";";
-    script += "(" + function ()
-    {
-        function _stopAnimations(maxChecks)
-        {
-            try
-            {
+    script += "(" + function () {
+        function _stopAnimations(maxChecks) {
+            try {
                 var pendingElems = document.querySelectorAll(".velocity-animating");
-                if (pendingElems.length > 0)
-                {
+                if (pendingElems.length > 0) {
                     if (debugRepeating) console.info("WAT: Will stop " + pendingElems.length + " pending animations");
 
                     Velocity(Array.from(pendingElems), "stop");
                     maxChecks--; // Max consecutive repetitions to prevent a potential infinite loop if WhatsApp changes something on their animation logic
-                    if (maxChecks > 0)
-                    {
+                    if (maxChecks > 0) {
                         setTimeout(function () { _stopAnimations(maxChecks); }, 0);
                     }
-                    else
-                    {
+                    else {
                         if (debugRepeating) console.info("WAT: Max repetitions reached while stopping animations, will not continue");
                     }
                 }
             }
-            catch (err)
-            {
+            catch (err) {
                 console.error("WAT: Exception while stopping Velocity.js animations");
                 console.error(err);
             }
         }
 
-        document.addEventListener("stopAnimations", function (e)
-        {
-            try
-            {
+        document.addEventListener("stopAnimations", function (e) {
+            try {
                 _stopAnimations(20); // maxChecks is set so that all consecutive _stopAnimations() calls should not exceed safetyDelayLong for optimal performance 
             }
-            catch (err)
-            {
+            catch (err) {
                 console.error("WAT: Exception while stopping animations");
                 console.error(err);
             }
         });
     } + ")();";
-    var scriptElem = document.createElement("script");
+    const scriptElem = document.createElement("script");
     scriptElem.innerHTML = script;
     document.head.appendChild(scriptElem);
 }
 
-var lastPotentialLoadingError = false;
+let lastPotentialLoadingError = false;
 
-function reCheckLoadingError()
-{
+function reCheckLoadingError() {
     setTimeout(function () { checkLoadingError(); }, checkLoadingErrorInterval);
 }
 
-function checkLoadingError()
-{
+function checkLoadingError() {
     if (debugRepeating) console.info("WAT: Checking potential loading error...");
 
-    try
-    {
-        var potentialLoadingError = document.querySelector("#startup") != undefined;
+    try {
+        const potentialLoadingError = document.querySelector("#startup") != undefined;
 
-        if (potentialLoadingError && !lastPotentialLoadingError)
-        {
+        if (potentialLoadingError && !lastPotentialLoadingError) {
             if (debug) console.warn("WAT: Found potential loading error");
         }
 
-        if (lastPotentialLoadingError && potentialLoadingError)
-        {
+        if (lastPotentialLoadingError && potentialLoadingError) {
             if (debug) console.warn("WAT: Found loading error, will reload");
 
             window.location.href = whatsAppUrl;
         }
-        else
-        {
+        else {
             lastPotentialLoadingError = potentialLoadingError;
         }
     }
-    catch (err)
-    {
+    catch (err) {
         console.error("WAT: Exception while checking loading error");
         console.error(err);
     }
@@ -470,80 +405,68 @@ function checkLoadingError()
 
 // FOR FOREGROUND SCRIPT /////////////////////////////////////////////////////////////////////////
 
-function checkSrcChat()
-{
+function checkSrcChat() {
     if (debug) console.info("WAT: Checking source chat...");
 
-    try
-    {
-        var fragment = window.location.hash;
-        if (typeof fragment == "string" && fragment.indexOf(sourceChatFragment) == 0)
-        {
-            var srcChatTitle = decodeURIComponent(fragment.substr(sourceChatFragment.length));
-            var chatTitle = undefined;
-            var foundSrcChat = false;
+    try {
+        const fragment = window.location.hash;
+        if (typeof fragment == "string" && fragment.indexOf(sourceChatFragment) == 0) {
+            const srcChatTitle = decodeURIComponent(fragment.substr(sourceChatFragment.length));
+            let chatTitle = undefined;
+            let foundSrcChat = false;
 
-            var parentChatElem = document.querySelector("#pane-side").children[0].children[0].children[0];
-            var chatElems = parentChatElem.children;
-            for (var i = 0; i < chatElems.length; i++)
-            {
-                var chatElem = chatElems[i];
+            const parentChatElem = document.querySelector("#pane-side").children[0].children[0].children[0];
+            const chatElems = parentChatElem.children;
+            for (let i = 0; i < chatElems.length; i++) {
+                const chatElem = chatElems[i];
                 chatTitle = chatElem.children[0].children[0].children[1].children[0].children[0].children[0].children[0];
-                var chatTitleText = chatTitle.getAttribute("title");
-                if (typeof chatTitleText == "string" && chatTitleText == srcChatTitle)
-                {
+                const chatTitleText = chatTitle.getAttribute("title");
+                if (typeof chatTitleText == "string" && chatTitleText == srcChatTitle) {
                     foundSrcChat = true;
                     break;
                 }
             }
-            
-            if (foundSrcChat)
-            {
+
+            if (foundSrcChat) {
                 if (debug) console.info("WAT: Found source chat, will click it");
 
                 history.replaceState({}, document.title, "/");
-                setTimeout(function ()
-                {
+                setTimeout(function () {
                     // For some reason chatTitle.click() stopped working
                     chatTitle.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
                 }, safetyDelayShort); // The delay fixes some strange page misposition glitch
             }
         }
     }
-    catch (err)
-    {
+    catch (err) {
         console.error("WAT: Exception while checking source chat");
         console.error(err);
     }
 }
 
-function addOptions()
-{
+function addOptions() {
     if (debug) console.info("WAT: Adding options...");
 
-    try
-    {
-        var menu = document.querySelector("#side > header").children[1];
-        if (menu != undefined)
-        {
+    try {
+        const menu = document.querySelector("#side > header").children[1];
+        if (menu != undefined) {
             if (debug) console.info("WAT: Will add options");
 
-            var menuItem = document.createElement("div");
+            const menuItem = document.createElement("div");
             menuItem.setAttribute("class", "menu-watoolkit");
-            var iconElem = document.createElement("button");
+            const iconElem = document.createElement("button");
             iconElem.setAttribute("class", "icon-watoolkit");
             iconElem.setAttribute("title", "WAToolkit options");
             menuItem.appendChild(iconElem);
             menu.firstChild.insertBefore(menuItem, menu.firstChild.firstChild);
 
-            chrome.runtime.sendMessage({ name: "getOptions" }, function (options)
-            {
+            chrome.runtime.sendMessage({ name: "getOptions" }, function (options) {
                 if (debug) console.info("WAT: Got options: " + JSON.stringify(options));
 
                 backgroundNotif = options.backgroundNotif;
                 wideText = options.wideText;
 
-                var dropContent = " \
+                const dropContent = " \
                 <div class='watoolkit-options-container'> \
                     <div class='watoolkit-options-title'>WAToolkit options</div> \
                     <div id='watoolkit-option-background-notif' class='watoolkit-options-item'> \
@@ -563,7 +486,7 @@ function addOptions()
                     </div> \
                 </div>";
 
-                var drop = new Drop({
+                const drop = new Drop({
                     target: menuItem,
                     content: dropContent,
                     position: "bottom left",
@@ -573,16 +496,14 @@ function addOptions()
                         offset: "-4px -4px 0 0"
                     }
                 });
-                drop.on("open", function()
-                {
+                drop.on("open", function () {
                     document.getElementsByClassName("menu-watoolkit")[0].setAttribute("class", "menu-horizontal-item active menu-watoolkit");
 
                     document.getElementById("watoolkit-option-background-notif").addEventListener("click", optionBackgroundNotifClick);
                     document.getElementById("watoolkit-option-wide-text").addEventListener("click", optionWideTextClick);
                     document.getElementById("watoolkit-option-rate").addEventListener("click", optionRateClick);
                 });
-                drop.on("close", function()
-                {
+                drop.on("close", function () {
                     document.getElementsByClassName("menu-watoolkit")[0].setAttribute("class", "menu-horizontal-item menu-watoolkit");
 
                     document.getElementById("watoolkit-option-background-notif").removeEventListener("click", optionBackgroundNotifClick);
@@ -590,50 +511,42 @@ function addOptions()
                     document.getElementById("watoolkit-option-rate").removeEventListener("click", optionRateClick);
                 });
 
-                var fragment = window.location.hash;
-                if (typeof fragment == "string" && fragment.indexOf(optionsFragment) == 0)
-                {
+                const fragment = window.location.hash;
+                if (typeof fragment == "string" && fragment.indexOf(optionsFragment) == 0) {
                     history.replaceState({}, document.title, "/");
                     setTimeout(function () { drop.open(); }, safetyDelayLong); // The delay fixes a potential dialog misposition glitch
                 }
             });
         }
     }
-    catch (err)
-    {
+    catch (err) {
         console.error("WAT: Exception while adding options");
         console.error(err);
     }
 }
 
-function optionBackgroundNotifClick()
-{
-    var checkbox = document.querySelector("#watoolkit-option-background-notif .checkbox-watoolkit");
-    var checkboxClass = checkbox.getAttribute("class");
-    if (checkboxClass.indexOf("unchecked") > -1)
-    {
+function optionBackgroundNotifClick() {
+    const checkbox = document.querySelector("#watoolkit-option-background-notif .checkbox-watoolkit");
+    const checkboxClass = checkbox.getAttribute("class");
+    if (checkboxClass.indexOf("unchecked") > -1) {
         checkbox.setAttribute("class", checkboxClass.replace("unchecked", "checked"));
         backgroundNotif = true;
     }
-    else
-    {
+    else {
         checkbox.setAttribute("class", checkboxClass.replace("checked", "unchecked"));
         backgroundNotif = false;
     }
     chrome.runtime.sendMessage({ name: "setOptions", backgroundNotif: backgroundNotif });
 }
 
-function optionWideTextClick()
-{
-    var checkbox = document.querySelector("#watoolkit-option-wide-text .checkbox-watoolkit");
-    var checkboxClass = checkbox.getAttribute("class");
-    if (checkboxClass.indexOf("unchecked") > -1)
-    {
+function optionWideTextClick() {
+    const checkbox = document.querySelector("#watoolkit-option-wide-text .checkbox-watoolkit");
+    const checkboxClass = checkbox.getAttribute("class");
+    if (checkboxClass.indexOf("unchecked") > -1) {
         checkbox.setAttribute("class", checkboxClass.replace("unchecked", "checked"));
         wideText = true;
     }
-    else
-    {
+    else {
         checkbox.setAttribute("class", checkboxClass.replace("checked", "unchecked"));
         wideText = false;
     }
@@ -641,32 +554,27 @@ function optionWideTextClick()
     updateWideText();
 }
 
-function optionRateClick()
-{
+function optionRateClick() {
     window.open(rateUrl);
 }
 
-var wideTextStyleElem;
+let wideTextStyleElem;
 
-function updateWideText()
-{
+function updateWideText() {
     if (debug) console.info("WAT: Updating wide text...");
 
-    if (wideTextStyleElem == undefined)
-    {
+    if (wideTextStyleElem == undefined) {
         wideTextStyleElem = document.createElement("style");
         wideTextStyleElem.setAttribute("type", "text/css");
         wideTextStyleElem.innerHTML = ".message-in div, .message-out div { max-width: 100% !important; }";
     }
 
-    if (wideText && wideTextStyleElem.parentElement == undefined)
-    {
+    if (wideText && wideTextStyleElem.parentElement == undefined) {
         if (debug) console.info("WAT: Will update wide text");
 
         document.getElementsByTagName("head")[0].appendChild(wideTextStyleElem);
     }
-    else if (!wideText && wideTextStyleElem.parentElement != undefined)
-    {
+    else if (!wideText && wideTextStyleElem.parentElement != undefined) {
         if (debug) console.info("WAT: Will update wide text");
 
         wideTextStyleElem.parentElement.removeChild(wideTextStyleElem);
