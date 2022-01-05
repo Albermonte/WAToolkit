@@ -1,3 +1,8 @@
+> Just a fork to use the original extension without the shady practices from the new owner. Will update the extension with latest JS, maybe porting it to Firefox and include some wanted upgrades and new features
+
+
+# Old Readme
+
 > ### ⚠️ CHANGE OF OWNERSHIP: The original WAToolkit Chrome extension published on the Chrome Web Store is no longer owned by Cristian Perez, which is the owner of this repository. Current and future versions published with the name "WAToolkit" on the Chrome Web Store will not come from me.
 
 > #### As a consequence, this repository will soon change name and a new extension will be published under that new name. It will still be open source and it will be linked from this respository. Meanwhile you can still safely install this extension manually following the instructions bellow as always.
