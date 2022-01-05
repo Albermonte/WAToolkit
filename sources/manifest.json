@@ -1,64 +1,63 @@
 ﻿{
-    "name": "WAToolkit",
-    "short_name": "WAToolkit",
-    "version": "2.0",
-    "manifest_version": 2,
+    "name": "WAToolkit Reborn",
+    "short_name": "WAToolkit-Reborn",
+    "version": "3.0",
+    "manifest_version": 3,
     "minimum_chrome_version": "37",
     "description": "A set of useful and lightweight tools for WhatsApp™ Web client.",
-    "icons":
-    {
+    "icons": {
         "16": "img/favicon16.png",
         "48": "img/icon48.png",
         "128": "img/icon128.png"
     },
-    "background":
-    {
-        "scripts": [ "background.js" ]
+    "background": {
+        "service_worker": "background.js"
     },
-    "content_scripts":
-    [
+    "content_scripts": [
         {
-            "matches":
-            [
+            "matches": [
                 "*://*.whatsapp.com/*"
             ],
-            "js":
-            [
+            "js": [
                 "script.js",
                 "lib/drop/drop.js"
             ],
-            "css":
-            [
+            "css": [
                 "style.css",
                 "lib/drop/css/drop-theme-basic.css"
             ],
-            "run_at":  "document_idle",
+            "run_at": "document_idle",
             "all_frames": true
         }
     ],
-    "web_accessible_resources":
-    [
-       "img/iconMenuItem24.png",
-       "img/checkboxChecked.png",
-       "img/checkboxUnchecked.png"
-    ],
-    "browser_action":
-    {
-        "default_icon":
+    "web_accessible_resources": [
         {
+            "resources": [
+                "img/iconMenuItem24.png",
+                "img/checkboxChecked.png",
+                "img/checkboxUnchecked.png"
+            ],
+            "matches": [
+                "*://*.whatsapp.com/*"
+            ]
+        }
+    ],
+    "action": {
+        "default_icon": {
             "19": "img/favicon19.png",
             "38": "img/favicon38.png"
         },
         "default_title": "Open WhatsApp"
     },
     "options_page": "options.html",
-    "permissions":
-    [
-        "*://*.whatsapp.com/*",
+    "permissions": [
         "tabs",
         "background",
         "notifications",
         "webRequest",
         "webRequestBlocking"
+    ],
+    "host_permissions": [
+        "*://*.whatsapp.com/*"
     ]
 }
