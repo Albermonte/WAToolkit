@@ -12,7 +12,7 @@ const debugRepeating = false;
 
 const whatsAppUrl = "https://web.whatsapp.com/";
 // TODO: Change for new one
-const rateUrl = "https://chrome.google.com/webstore/detail/watoolkit/fedimamkpgiemhacbdhkkaihgofncola/reviews";
+const rateUrl = "https://chrome.google.com/webstore/detail/watoolkit-reborn/nicckpohheijjlcjfnaecockiekepjhp/reviews";
 const optionsFragment = "#watOptions";
 const sourceChatFragment = "#watSrcChatTitle=";
 
